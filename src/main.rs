@@ -150,7 +150,7 @@ fn lex(text: &str) {
             tokens.push(tok)
         }
 
-        println!("Stack left: {}", chars[idx..].iter().collect::<String>());
+        // println!("Stack left: {}", chars[idx..].iter().collect::<String>());
     }
 
     println!("{:#?}", tokens);
