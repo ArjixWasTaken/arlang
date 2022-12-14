@@ -7,7 +7,7 @@ struct Token {
 }
 
 fn lex(text: &str) {
-    let mut chars = text.chars().collect::<Vec<char>>();
+    let chars = text.chars().collect::<Vec<char>>();
     let mut tokens: Vec<Token> = vec![];
     let mut idx = 0;
 
