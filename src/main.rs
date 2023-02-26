@@ -7,6 +7,7 @@ mod parser;
 mod types;
 
 use crate::types::Node;
+use anyhow::Result;
 use colored::*;
 
 fn repl() {
@@ -29,8 +30,9 @@ fn repl() {
     }
 }
 
-fn main() -> std::io::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+fn main() -> Result<()> {
+    let mut args = std::env::args();
+    args.next();
 
     println!(
         "{} -- version {} {} Github: {}",
@@ -39,8 +41,8 @@ fn main() -> std::io::Result<()> {
         "//".bright_black(),
         "ArjixWasTaken".bright_blue()
     );
-    if false {
-        // || args.contains(&"repl".into()) {
+
+    if args.next() == Some("repl".into()) {
         return Ok(repl());
     }
 
