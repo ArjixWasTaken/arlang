@@ -5,18 +5,6 @@ pub struct Parser {
     pub tokens: Vec<Token>,
 }
 
-fn empty_bin_expr() -> Node {
-    Node::BinaryExpr {
-        left: Box::from(Node::BinaryExpr {
-            left: Box::new(Node::MemberExpr),
-            right: Box::new(Node::MemberExpr),
-            operator: "".to_string(),
-        }),
-        right: Box::new(Node::MemberExpr),
-        operator: "".to_string(),
-    }
-}
-
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self { tokens }
