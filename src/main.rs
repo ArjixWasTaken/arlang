@@ -3,11 +3,11 @@
 extern crate core;
 
 mod lexer;
-mod types;
 mod parser;
+mod types;
 
-use colored::*;
 use crate::types::Node;
+use colored::*;
 
 fn repl() {
     loop {
@@ -18,13 +18,13 @@ fn repl() {
             break;
         }
 
-        let parser = parser::Parser::new(&mut lexer::lex(&input)).parse();
+        let parser = parser::Parser::new(lexer::lex(&input)).parse();
 
         match &parser {
             Node::Program { body } => {
                 println!("{:#?}", body);
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -32,21 +32,28 @@ fn repl() {
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
-    println!("{} -- version {} {} Github: {}", "arlang".green(), "0.0.1".yellow(), "//".bright_black(), "ArjixWasTaken".bright_blue());
-    if false { // || args.contains(&"repl".into()) {
-        return Ok(repl())
+    println!(
+        "{} -- version {} {} Github: {}",
+        "arlang".green(),
+        "0.0.1".yellow(),
+        "//".bright_black(),
+        "ArjixWasTaken".bright_blue()
+    );
+    if false {
+        // || args.contains(&"repl".into()) {
+        return Ok(repl());
     }
-    
-    let input = "1 + 1";
+
+    let input = "1 + 1 + 1 / 5";
     print!("> {input}\n");
 
-    let parser = parser::Parser::new(&mut lexer::lex(&input)).parse();
+    let parser = parser::Parser::new(lexer::lex(&input)).parse();
 
     match &parser {
         Node::Program { body } => {
-            println!("{:#?}", body);
-        },
-        _ => unreachable!()
+            println!("Body {:#?}", body);
+        }
+        _ => unreachable!(),
     }
 
     Ok(())

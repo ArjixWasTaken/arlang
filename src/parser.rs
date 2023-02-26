@@ -1,8 +1,8 @@
-use std::borrow::Borrow;
-use crate::types::{Program, Token, TokeType, Node};
+use crate::types::{Node, Program, TokeType, Token};
+use anyhow::{bail, Result};
 
-pub struct Parser<'a> {
-    pub tokens: &'a mut Vec<Token>
+pub struct Parser {
+    pub tokens: Vec<Token>,
 }
 
 fn empty_bin_expr() -> Node {
@@ -17,108 +17,114 @@ fn empty_bin_expr() -> Node {
     }
 }
 
-impl<'ctx> Parser<'ctx> {
-    pub fn new(tokens: &'ctx mut Vec<Token>) -> Self {
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
         Self { tokens }
     }
 
-    fn reached_eof(&'ctx self) -> bool {
-        self.tokens.len()  > 0
-    }
+    pub fn parse(&mut self) -> Node {
+        let mut program = Node::Program { body: vec![] };
+        let Node::Program { mut body } = program else {
+            unreachable!()
+        };
 
-    pub fn parse(&'ctx mut self) -> Node {
-        let mut program = Node::Program{body: vec![]};
-
-        if let Node::Program { body } = &mut program {
-            while !self.reached_eof() {
-                if let Some(expr) = self.parse_additive_expr() {
-                    body.push(expr);
-                }
-            }
+        while !self.eof() {
+            body.push(self.parse_additive_expr().unwrap());
         }
 
-        program
+        Node::Program {
+            body: body.to_vec(),
+        }
     }
 
-    fn at(&'ctx self) -> Option<&'ctx Token> {
-        Some(self.tokens.first()?)
+    fn eof(&self) -> bool {
+        self.tokens.len() == 0
     }
 
-    fn consume(&'ctx mut self) -> Option<Token> {
-        Some(self.tokens.remove(0))
+    fn at(&mut self) -> Result<&Token> {
+        self.tokens
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("Unexpected end of input"))
     }
 
-    fn expect(&'ctx mut self, typ: TokeType) -> Option<Token> {
+    fn consume(&mut self) -> Result<Token> {
+        let tok = self.at()?.clone();
+        // println!("Consuming token: {:?}", tok);
+        self.tokens = self.tokens[1..].to_vec();
+        Ok(tok)
+    }
+
+    fn expect(&mut self, typ: TokeType) -> Result<Token> {
         let tok = self.consume()?;
         if !matches!(&tok.typ, typ) {
-            panic!("lol, this might be a parser bug")
+            bail!("lol, this might be a parser bug");
         }
-        Some(tok)
+        Ok(tok)
     }
 
-    fn parse_primary_expr(&'ctx mut self) -> Option<Node> {
+    fn parse_primary_expr(&mut self) -> Result<Node> {
         use TokeType::*;
 
         match self.at()?.typ {
-            Identifier => Some(Node::Identifier { name: self.consume()?.val.into() }),
-            Int => Some(Node::NumericLiteral { typ: "int".into(), val: self.consume()?.val.into() }),
-            Float => Some(Node::NumericLiteral { typ: "float".into(), val: self.consume()?.val.into() }),
+            Identifier => Ok(Node::Identifier {
+                name: self.consume()?.val.into(),
+            }),
+            Int => Ok(Node::NumericLiteral {
+                typ: "int".into(),
+                val: self.consume()?.val.into(),
+            }),
+            Float => Ok(Node::NumericLiteral {
+                typ: "float".into(),
+                val: self.consume()?.val.into(),
+            }),
             OpenParen => {
                 let val = self.parse_additive_expr();
-                self.expect(CloseParen);
+                self.expect(CloseParen)?;
                 val
             }
-            _ => panic!("wtf")
+            _ => {
+                bail!("Unexpected token: {:?}", self.at()?);
+            }
         }
     }
 
-    fn parse_additive_expr(&'ctx mut self) -> Option<Node> {
-        let mut Left = empty_bin_expr();
+    fn parse_additive_expr(&mut self) -> Result<Node> {
+        let mut left = self.parse_multiplicative_expr()?;
 
-        let leftExpr = self.parse_multiplicative_expr();
+        while !self.eof()
+            && matches!(self.at()?.typ, TokeType::Operator)
+            && ["+", "-"].contains(&self.at()?.val.as_str())
+        {
+            let op = &self.expect(TokeType::Operator)?.val;
+            let right = self.parse_multiplicative_expr()?;
 
-        match &Left {
-            Node::BinaryExpr { left, right, operator } => {
-                let leftExpr = self.parse_primary_expr();
-
-                while matches!(self.at()?.typ, TokeType::Operator) {
-                    let op = &self.expect(TokeType::Operator)?.val;
-                    let right = self.parse_multiplicative_expr();
-
-                    if operator == "" {
-                        Left = Node::BinaryExpr { left: leftExpr?.into(), right: right?.into(), operator: operator.into() };
-                    } else {
-                        Left = Node::BinaryExpr { left: Left.into(), right: right?.into(), operator: operator.into() };
-                    }
-                }
-
-                return Some(Left);
-            }
-            _ => unreachable!()
+            left = Node::BinaryExpr {
+                left: left.clone().into(),
+                right: right.into(),
+                operator: op.into(),
+            };
         }
+
+        Ok(left)
     }
 
-    fn parse_multiplicative_expr(&'ctx mut self) -> Option<Node> {
-        let mut Left = empty_bin_expr();
+    fn parse_multiplicative_expr(&mut self) -> Result<Node> {
+        let mut left = self.parse_primary_expr()?;
 
-        match &Left {
-            Node::BinaryExpr { left, right, operator } => {
-                let leftExpr = self.parse_primary_expr();
+        while !self.eof()
+            && matches!(self.at()?.typ, TokeType::Operator)
+            && ["*", "/", "%"].contains(&self.at()?.val.as_str())
+        {
+            let op = &self.expect(TokeType::Operator)?.val;
+            let right = self.parse_primary_expr()?;
 
-                while matches!(self.at()?.typ, TokeType::Operator) {
-                    let op = &self.expect(TokeType::Operator)?.val;
-                    let right = self.parse_primary_expr();
-
-                    if operator == "" {
-                        Left = Node::BinaryExpr { left: leftExpr?.into(), right: right?.into(), operator: operator.into() };
-                    } else {
-                        Left = Node::BinaryExpr { left: Left.into(), right: right?.into(), operator: operator.into() };
-                    }
-                }
-
-                return Some(Left);
-            }
-            _ => unreachable!()
+            left = Node::BinaryExpr {
+                left: left.clone().into(),
+                right: right.into(),
+                operator: op.into(),
+            };
         }
+
+        Ok(left)
     }
 }
