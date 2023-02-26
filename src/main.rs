@@ -32,7 +32,7 @@ fn repl() {
 
 fn main() -> Result<()> {
     let mut args = std::env::args();
-    args.next();
+    args.next(); // skip the first argument
 
     println!(
         "{} -- version {} {} Github: {}",

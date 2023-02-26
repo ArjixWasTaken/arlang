@@ -43,7 +43,6 @@ impl Parser {
 
     fn at(&mut self) -> Result<&Token> {
         let first = self.tokens.first();
-        println!("At token: {:?}", first);
 
         first.ok_or_else(|| anyhow::anyhow!("Unexpected end of input"))
     }
