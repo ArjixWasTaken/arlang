@@ -1,5 +1,22 @@
-use crate::types::{ Token, TokeType };
 use crate::types::Node::Identifier;
+use crate::types::{TokeType, Token};
+
+macro_rules! parse_operator {
+    ($chars: ident, $idx: ident) => {
+        if $chars.len() > $idx && $chars[$idx + 1] == '=' {
+            $idx += 1;
+            Some(Token {
+                typ: TokeType::Assignment,
+                val: format!("{}=", $chars[$idx - 1]),
+            })
+        } else {
+            Some(Token {
+                typ: TokeType::Operator,
+                val: $chars[$idx].into(),
+            })
+        }
+    };
+}
 
 pub(crate) fn lex(text: &str) -> Vec<Token> {
     let chars = text.chars().collect::<Vec<char>>();
@@ -11,18 +28,42 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
         let val: String = char.into();
 
         let tok = match char {
-            '(' => Some(Token { typ: TokeType::OpenParen, val }),
-            '=' => Some(Token { typ: TokeType::Assignment, val }),
-            ')' => Some(Token { typ: TokeType::CloseParen, val }),
-            '[' => Some(Token { typ: TokeType::OpenBracket, val }),
-            ']' => Some(Token { typ: TokeType::CloseBracket, val }),
-            '{' => Some(Token { typ: TokeType::OpenBrace, val }),
-            '}' => Some(Token { typ: TokeType::CloseBrace, val }),
-            ',' => Some(Token { typ: TokeType::Comma, val }),
-            '-' => Some(Token { typ: TokeType::Operator, val }),
-            '*' => Some(Token { typ: TokeType::Operator, val }),
-            '+' => Some(Token { typ: TokeType::Operator, val }),
-            '%' => Some(Token { typ: TokeType::Operator, val }),
+            '(' => Some(Token {
+                typ: TokeType::OpenParen,
+                val,
+            }),
+            '=' => Some(Token {
+                typ: TokeType::Assignment,
+                val,
+            }),
+            ')' => Some(Token {
+                typ: TokeType::CloseParen,
+                val,
+            }),
+            '[' => Some(Token {
+                typ: TokeType::OpenBracket,
+                val,
+            }),
+            ']' => Some(Token {
+                typ: TokeType::CloseBracket,
+                val,
+            }),
+            '{' => Some(Token {
+                typ: TokeType::OpenBrace,
+                val,
+            }),
+            '}' => Some(Token {
+                typ: TokeType::CloseBrace,
+                val,
+            }),
+            ',' => Some(Token {
+                typ: TokeType::Comma,
+                val,
+            }),
+            '-' => parse_operator!(chars, idx),
+            '*' => parse_operator!(chars, idx),
+            '+' => parse_operator!(chars, idx),
+            '%' => parse_operator!(chars, idx),
             '"' => {
                 let mut string_chars: Vec<char> = vec![];
                 idx += 1;
@@ -41,22 +82,24 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
                             'n' => {
                                 string_chars.pop();
                                 string_chars.push('\n');
-                            },
+                            }
                             't' => {
                                 string_chars.pop();
                                 string_chars.push('\t');
-                            },
+                            }
                             'r' => {
                                 string_chars.pop();
                                 string_chars.push('\r');
-                            },
+                            }
                             '"' => {
                                 string_chars.pop();
                                 string_chars.push('"');
-                            },
-                            _ => string_chars.push(chars[idx])
+                            }
+                            _ => string_chars.push(chars[idx]),
                         }
-                    } else { string_chars.push(chars[idx]) }
+                    } else {
+                        string_chars.push(chars[idx])
+                    }
 
                     prev = &chars[idx];
                     idx += 1;
@@ -66,30 +109,34 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
                     panic!("Missing quote from string: Did you forget to add a closing quote to the string?")
                 }
 
-                Some(Token{ typ: TokeType::String, val: string_chars.iter().collect()})
-            },
+                Some(Token {
+                    typ: TokeType::String,
+                    val: string_chars.iter().collect(),
+                })
+            }
             '/' => {
-                if let Some(next) = chars.get(idx+1) {
+                if let Some(next) = chars.get(idx + 1) {
                     if next == &'*' || next == &'/' {
                         let mut comment_chars: Vec<char> = vec![];
                         let is_multiline = next == &'*';
 
                         idx += 2;
-                        if idx >= chars.len() { unreachable!() }
+                        if idx >= chars.len() {
+                            unreachable!()
+                        }
                         let mut prev = chars.get(idx).unwrap_or(&'.');
 
-                        while idx < chars.len() &&
-                            (
-                                (is_multiline && (prev != &'*' && chars[idx] != '/')) ||
-                                    (!is_multiline && chars[idx] != '\n')
-                            ) {
+                        while idx < chars.len()
+                            && ((is_multiline && (prev != &'*' && chars[idx] != '/'))
+                                || (!is_multiline && chars[idx] != '\n'))
+                        {
                             comment_chars.push(chars[idx]);
                             prev = &chars[idx];
-                            idx  += 1;
+                            idx += 1;
                         }
 
                         if is_multiline {
-                            if chars[idx-1] == '*' && chars[idx] == '/' {
+                            if chars[idx - 1] == '*' && chars[idx] == '/' {
                                 comment_chars.pop();
                                 idx += 1;
                             } else {
@@ -98,14 +145,17 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
                         }
                         idx -= 1;
 
-                        Some(Token{ typ: TokeType::Comment, val: comment_chars.into_iter().collect()})
+                        Some(Token {
+                            typ: TokeType::Comment,
+                            val: comment_chars.into_iter().collect(),
+                        })
                     } else {
-                        Some(Token { typ: TokeType::Operator, val })
+                        parse_operator!(chars, idx)
                     }
                 } else {
-                    todo!()
+                    unreachable!()
                 }
-            },
+            }
             _ => {
                 if chars[idx].is_numeric() {
                     let mut number_chars: Vec<char> = vec![chars[idx]];
@@ -129,13 +179,20 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
 
                     idx -= 1;
 
-                    Some(Token{
-                        typ: (if is_float {TokeType::Float} else {TokeType::Int}),
-                        val: number_chars.into_iter().collect()
+                    Some(Token {
+                        typ: (if is_float {
+                            TokeType::Float
+                        } else {
+                            TokeType::Int
+                        }),
+                        val: number_chars.into_iter().collect(),
                     })
-                } else if idx+1 < chars.len() && chars[idx] == '.' && chars[idx+1] == '.' {
+                } else if idx + 1 < chars.len() && chars[idx] == '.' && chars[idx + 1] == '.' {
                     idx += 1;
-                    Some(Token{ typ: TokeType::Operator, val: "Range".into()})
+                    Some(Token {
+                        typ: TokeType::Operator,
+                        val: "Range".into(),
+                    })
                 } else if chars[idx].is_whitespace() {
                     None
                 } else if chars[idx].is_alphabetic() || chars[idx] == '_' {
@@ -150,13 +207,22 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
                     let word = identifier_or_keyword_chars.iter().collect::<String>();
 
                     match word.as_str() {
-                        "const" | "let" => Some(Token{typ: TokeType::Keyword, val: word}),
-                        _ => Some(Token{typ: TokeType::Identifier, val: word})
+                        "const" | "let" => Some(Token {
+                            typ: TokeType::Keyword,
+                            val: word,
+                        }),
+                        _ => Some(Token {
+                            typ: TokeType::Identifier,
+                            val: word,
+                        }),
                     }
                 } else {
-                    panic!("Unexpected value found: {}", chars[idx..].into_iter().take(20).collect::<String>())
+                    panic!(
+                        "Unexpected value found: {}",
+                        chars[idx..].into_iter().take(20).collect::<String>()
+                    )
                 }
-            },
+            }
         };
 
         idx += 1;

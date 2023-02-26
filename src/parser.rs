@@ -42,9 +42,10 @@ impl Parser {
     }
 
     fn at(&mut self) -> Result<&Token> {
-        self.tokens
-            .first()
-            .ok_or_else(|| anyhow::anyhow!("Unexpected end of input"))
+        let first = self.tokens.first();
+        println!("At token: {:?}", first);
+
+        first.ok_or_else(|| anyhow::anyhow!("Unexpected end of input"))
     }
 
     fn consume(&mut self) -> Result<Token> {
@@ -68,8 +69,20 @@ impl Parser {
         let node = self.consume()?;
 
         match &node.typ {
-            Identifier => Ok(Node::Identifier {
-                name: node.val.into(),
+            Identifier => Ok(if matches!(self.at()?.typ, Assignment) {
+                let name = node.val;
+                let op = self.expect(Assignment)?;
+
+                let val = self.parse_additive_expr()?;
+                Node::BinaryExpr {
+                    left: Box::new(Node::Variable { name }),
+                    right: Box::new(val),
+                    operator: op.val.into(),
+                }
+            } else {
+                Node::Identifier {
+                    name: node.val.into(),
+                }
             }),
             Int => Ok(Node::NumericLiteral {
                 typ: "int".into(),
@@ -83,6 +96,24 @@ impl Parser {
                 let val = self.parse_additive_expr();
                 self.expect(CloseParen)?;
                 val
+            }
+            Keyword => {
+                let name = node.val;
+                match name.as_str() {
+                    "const" | "let" => {
+                        let name = self.expect(Identifier)?.val;
+                        let op = self.expect(Assignment)?;
+                        assert!(op.val == "=", "Only '=' is allowed when declaring a variable, what were you thinking?");
+
+                        let val = self.parse_additive_expr()?;
+                        Ok(Node::BinaryExpr {
+                            left: Box::new(Node::Variable { name }),
+                            right: Box::new(val),
+                            operator: op.val.into(),
+                        })
+                    }
+                    _ => bail!("Unexpected keyword: {}", name),
+                }
             }
             _ => {
                 bail!("Unexpected token: {:?}", node);

@@ -37,8 +37,7 @@ pub enum Node {
     Identifier {
         name: String,
     },
-    VariableDecl {
-        modifier: String,
+    Variable {
         name: String,
     },
     BinaryExpr {
@@ -72,17 +71,6 @@ pub struct Expr {
 pub trait NewBinaryExpr {
     fn new(left: Expr, right: Expr, op: String) -> Self;
 }
-
-// impl NewBinaryExpr for BinaryExpr {
-//     fn new(left: Expr, right: Expr, operator: String) -> Self {
-//         BinaryExpr {
-//             expr: Expr { stmt: Statement { kind: Node::BinaryExpr } },
-//             left,
-//             right,
-//             operator
-//         }
-//     }
-// }
 
 pub struct MemberExpr {
     pub expr: Expr,
