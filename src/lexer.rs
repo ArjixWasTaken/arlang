@@ -207,7 +207,7 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
                     let word = identifier_or_keyword_chars.iter().collect::<String>();
 
                     match word.as_str() {
-                        "const" | "let" => Some(Token {
+                        "const" | "let" | "fn" => Some(Token {
                             typ: TokeType::Keyword,
                             val: word,
                         }),

@@ -42,11 +42,22 @@ fn main() -> Result<()> {
         "ArjixWasTaken".bright_blue()
     );
 
-    if args.next() == Some("repl".into()) {
-        return Ok(repl());
+    let mut input = String::from("1 + 1 + 1 / 5");
+
+    match args.next() {
+        Some(arg) => match arg.as_str() {
+            "repl" => return Ok(repl()),
+            "eval" => {
+                input = args.collect::<Vec<_>>().join(" ");
+            }
+            _ => {
+                println!("Unknown argument: {}", arg);
+                return Ok(());
+            }
+        },
+        None => {}
     }
 
-    let input = "1 + 1 + 1 / 5";
     print!("> {input}\n");
 
     let parser = parser::Parser::new(lexer::lex(&input)).parse();

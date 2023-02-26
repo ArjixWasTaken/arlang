@@ -45,6 +45,11 @@ pub enum Node {
         right: Box<Node>,
         operator: String,
     },
+    Function {
+        name: String,
+        params: Vec<Node>,
+        body: Vec<Node>,
+    },
 }
 
 impl Node {

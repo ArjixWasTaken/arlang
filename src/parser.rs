@@ -49,8 +49,9 @@ impl Parser {
 
     fn consume(&mut self) -> Result<Token> {
         let tok = self.at()?.clone();
-        // println!("Consuming token: {:?}", tok);
+        // println!("\nConsuming token: {:?}", tok);
         self.tokens = self.tokens[1..].to_vec();
+        // println!("Tokens: {:?}\n", self.tokens);
         Ok(tok)
     }
 
@@ -68,21 +69,23 @@ impl Parser {
         let node = self.consume()?;
 
         match &node.typ {
-            Identifier => Ok(if matches!(self.at()?.typ, Assignment) {
-                let name = node.val;
-                let op = self.expect(Assignment)?;
+            Identifier => Ok(
+                if self.at().is_ok() && matches!(self.at()?.typ, Assignment) {
+                    let name = node.val;
+                    let op = self.expect(Assignment)?;
 
-                let val = self.parse_additive_expr()?;
-                Node::BinaryExpr {
-                    left: Box::new(Node::Variable { name }),
-                    right: Box::new(val),
-                    operator: op.val.into(),
-                }
-            } else {
-                Node::Identifier {
-                    name: node.val.into(),
-                }
-            }),
+                    let val = self.parse_additive_expr()?;
+                    Node::BinaryExpr {
+                        left: Box::new(Node::Variable { name }),
+                        right: Box::new(val),
+                        operator: op.val.into(),
+                    }
+                } else {
+                    Node::Identifier {
+                        name: node.val.into(),
+                    }
+                },
+            ),
             Int => Ok(Node::NumericLiteral {
                 typ: "int".into(),
                 val: node.val.into(),
@@ -110,6 +113,28 @@ impl Parser {
                             right: Box::new(val),
                             operator: op.val.into(),
                         })
+                    }
+                    "fn" => {
+                        let name = self.expect(Identifier)?.val;
+
+                        self.expect(OpenParen)?;
+                        let mut params = vec![];
+                        while !self.eof() && matches!(self.at()?.typ, Identifier) {
+                            params.push(self.parse_primary_expr()?);
+                            if matches!(self.at()?.typ, Comma) {
+                                self.consume()?;
+                            }
+                        }
+                        self.expect(CloseParen)?;
+                        self.expect(OpenBrace)?;
+
+                        let mut body = vec![];
+                        while !self.eof() && !matches!(self.at()?.typ, CloseBrace) {
+                            body.push(self.parse_additive_expr()?);
+                        }
+                        self.expect(CloseBrace)?;
+
+                        Ok(Node::Function { name, params, body })
                     }
                     _ => bail!("Unexpected keyword: {}", name),
                 }
