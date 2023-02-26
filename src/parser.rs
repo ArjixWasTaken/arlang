@@ -65,17 +65,19 @@ impl Parser {
     fn parse_primary_expr(&mut self) -> Result<Node> {
         use TokeType::*;
 
-        match self.at()?.typ {
+        let node = self.consume()?;
+
+        match &node.typ {
             Identifier => Ok(Node::Identifier {
-                name: self.consume()?.val.into(),
+                name: node.val.into(),
             }),
             Int => Ok(Node::NumericLiteral {
                 typ: "int".into(),
-                val: self.consume()?.val.into(),
+                val: node.val.into(),
             }),
             Float => Ok(Node::NumericLiteral {
                 typ: "float".into(),
-                val: self.consume()?.val.into(),
+                val: node.val.into(),
             }),
             OpenParen => {
                 let val = self.parse_additive_expr();
@@ -83,7 +85,7 @@ impl Parser {
                 val
             }
             _ => {
-                bail!("Unexpected token: {:?}", self.at()?);
+                bail!("Unexpected token: {:?}", node);
             }
         }
     }
