@@ -20,6 +20,23 @@ impl Parser {
             body.push(self.parse_additive_expr().unwrap());
         }
 
+        let found_main = !body
+            .iter()
+            .filter(|x| {
+                if let Node::Function { name, params, body } = x {
+                    if name == "main" {
+                        return true;
+                    }
+                }
+                false
+            })
+            .collect::<Vec<_>>()
+            .is_empty();
+
+        if !found_main {
+            panic!("No main function found");
+        }
+
         Node::Program {
             body: body.to_vec(),
         }

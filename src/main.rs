@@ -2,6 +2,7 @@
 
 extern crate core;
 
+mod compiler;
 mod lexer;
 mod parser;
 mod types;
@@ -9,6 +10,15 @@ mod types;
 use crate::types::Node;
 use anyhow::Result;
 use colored::*;
+
+// a function to indent a multiline string
+pub fn indent(s: &str, n: usize) -> String {
+    let mut out = String::new();
+    for line in s.lines() {
+        out.push_str(&format!("{}{}\n", " ".repeat(n), line));
+    }
+    out
+}
 
 fn repl() {
     loop {
@@ -19,7 +29,11 @@ fn repl() {
             break;
         }
 
-        let parser = parser::Parser::new(lexer::lex(&input)).parse();
+        let parser = parser::Parser::new(lexer::lex(&format!(
+            "fn main() {{\n{}\n}}",
+            indent(&input, 4)
+        )))
+        .parse();
 
         match &parser {
             Node::Program { body } => {
@@ -64,7 +78,8 @@ fn main() -> Result<()> {
 
     match &parser {
         Node::Program { body } => {
-            println!("Body {:#?}", body);
+            let code = compiler::compile(parser);
+            println!("Generated code:\n\n{}", code);
         }
         _ => unreachable!(),
     }
