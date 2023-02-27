@@ -60,6 +60,10 @@ pub(crate) fn lex(text: &str) -> Vec<Token> {
                 typ: TokeType::Comma,
                 val,
             }),
+            ':' => Some(Token {
+                typ: TokeType::Colon,
+                val,
+            }),
             '-' => parse_operator!(chars, idx),
             '*' => parse_operator!(chars, idx),
             '+' => parse_operator!(chars, idx),

@@ -61,7 +61,7 @@ fn main() -> Result<()> {
     match args.next() {
         Some(arg) => match arg.as_str() {
             "repl" => return Ok(repl()),
-            "eval" => {
+            "compile" => {
                 input = args.collect::<Vec<_>>().join(" ");
             }
             _ => {

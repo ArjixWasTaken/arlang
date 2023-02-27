@@ -15,7 +15,13 @@ pub fn compile(ast: Node) -> String {
         Function { name, params, body } => {
             let mut output = String::new();
 
-            output.extend(format!("void {}() {{\n", name).chars());
+            let params = params
+                .iter()
+                .map(|p| compile(p.clone()))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            output.extend(format!("void {}({}) {{\n", name, params).chars());
 
             output.extend(
                 indent(
@@ -43,6 +49,16 @@ pub fn compile(ast: Node) -> String {
             compile(*left.clone()),
             operator,
             compile(*right.clone())
+        ),
+        Identifier { name } => name.to_owned(),
+        TypedIdentifier { name, typ } => format!("{}: {}", name, compile(*typ.clone())),
+        CallExpr { callee, args } => format!(
+            "{}({})",
+            compile(*callee.clone()),
+            args.iter()
+                .map(|arg| compile(arg.clone()))
+                .collect::<Vec<_>>()
+                .join(", ")
         ),
         _ => unimplemented!("{:?} is not implemented yet", ast),
     }

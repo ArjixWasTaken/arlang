@@ -74,8 +74,8 @@ impl Parser {
         let node = self.consume()?;
 
         match &node.typ {
-            Identifier => Ok(
-                if self.at().is_ok() && matches!(self.at()?.typ, Assignment) {
+            Identifier => Ok(if self.at().is_ok() {
+                if matches!(self.at()?.typ, Assignment) {
                     let name = node.val;
                     let op = self.expect(Assignment)?;
 
@@ -85,12 +85,31 @@ impl Parser {
                         right: Box::new(val),
                         operator: op.val.into(),
                     }
+                } else if matches!(self.at()?.typ, OpenParen) {
+                    let name = node.val;
+                    self.expect(OpenParen)?;
+                    let mut args = vec![];
+                    while !self.eof() && !matches!(self.at()?.typ, CloseParen) {
+                        args.push(self.parse_additive_expr()?);
+                        if matches!(self.at()?.typ, Comma) {
+                            self.consume()?;
+                        }
+                    }
+                    self.expect(CloseParen)?;
+                    Node::CallExpr {
+                        callee: Box::new(Node::Identifier { name }),
+                        args,
+                    }
                 } else {
                     Node::Identifier {
                         name: node.val.into(),
                     }
-                },
-            ),
+                }
+            } else {
+                Node::Identifier {
+                    name: node.val.into(),
+                }
+            }),
             Int => Ok(Node::NumericLiteral {
                 typ: "int".into(),
                 val: node.val.into(),
@@ -125,7 +144,14 @@ impl Parser {
                         self.expect(OpenParen)?;
                         let mut params = vec![];
                         while !self.eof() && matches!(self.at()?.typ, Identifier) {
-                            params.push(self.parse_primary_expr()?);
+                            let ident = self.expect(Identifier)?;
+                            self.expect(Colon)?;
+
+                            params.push(Node::TypedIdentifier {
+                                name: ident.val.into(),
+                                typ: self.parse_primary_expr()?.into(),
+                            });
+
                             if matches!(self.at()?.typ, Comma) {
                                 self.consume()?;
                             }

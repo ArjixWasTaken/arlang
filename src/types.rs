@@ -7,6 +7,7 @@ pub enum TokeType {
     OpenBrace,
     CloseBrace,
     Comma,
+    Colon,
     Operator,
     Assignment,
     String,
@@ -29,7 +30,10 @@ pub enum Node {
         body: Vec<Node>,
     },
     MemberExpr,
-    CallExpr,
+    CallExpr {
+        callee: Box<Node>,
+        args: Vec<Node>,
+    },
     NumericLiteral {
         typ: String,
         val: String,
@@ -39,6 +43,10 @@ pub enum Node {
     },
     Variable {
         name: String,
+    },
+    TypedIdentifier {
+        name: String,
+        typ: Box<Node>, // Identifier
     },
     BinaryExpr {
         left: Box<Node>,
