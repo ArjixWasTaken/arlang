@@ -10,6 +10,7 @@ mod types;
 use crate::types::Node;
 use anyhow::Result;
 use colored::*;
+use rustyline::{error::ReadlineError, DefaultEditor};
 
 // a function to indent a multiline string
 pub fn indent(s: &str, n: usize) -> String {
@@ -21,25 +22,43 @@ pub fn indent(s: &str, n: usize) -> String {
 }
 
 fn repl() {
+    let mut rl = DefaultEditor::new().unwrap();
+
     loop {
-        let input: String = casual::input().default("".into()).prompt("> ").get();
+        let readline = rl.readline("> ");
+        match readline {
+            Ok(line) => {
+                if line.trim().len() == 0 || line.trim() == "exit" {
+                    println!("Exiting...");
+                    break;
+                }
 
-        if input.trim().len() == 0 || input.trim() == "exit" {
-            println!("Exiting...");
-            break;
-        }
+                rl.add_history_entry(line.as_str()).unwrap();
+                let parser = parser::Parser::new(lexer::lex(&format!(
+                    "fn main() {{\n{}\n}}",
+                    indent(&line, 4)
+                )))
+                .parse();
 
-        let parser = parser::Parser::new(lexer::lex(&format!(
-            "fn main() {{\n{}\n}}",
-            indent(&input, 4)
-        )))
-        .parse();
-
-        match &parser {
-            Node::Program { body } => {
-                println!("{:#?}", body);
+                match &parser {
+                    Node::Program { body } => {
+                        println!("{:#?}", body);
+                    }
+                    _ => unreachable!(),
+                }
             }
-            _ => unreachable!(),
+            Err(ReadlineError::Interrupted) => {
+                println!("Exiting...");
+                break;
+            }
+            Err(ReadlineError::Eof) => {
+                println!("Exiting...");
+                break;
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
+            }
         }
     }
 }
